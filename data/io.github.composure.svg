@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90D9"/>
+      <stop offset="100%" style="stop-color:#667EEA"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#bg)"/>
+  <!-- Screenshot card -->
+  <rect x="28" y="32" width="72" height="56" rx="8" fill="white" filter="url(#shadow)"/>
+  <!-- Content lines -->
+  <rect x="36" y="42" width="40" height="4" rx="2" fill="#E5E7EB"/>
+  <rect x="36" y="52" width="56" height="4" rx="2" fill="#E5E7EB"/>
+  <rect x="36" y="62" width="48" height="4" rx="2" fill="#E5E7EB"/>
+  <rect x="36" y="72" width="32" height="4" rx="2" fill="#E5E7EB"/>
+  <!-- Balance indicator -->
+  <circle cx="64" cy="100" r="8" fill="white" opacity="0.9"/>
+  <path d="M60 100 L64 96 L68 100 L64 104 Z" fill="#4A90D9"/>
+</svg>
