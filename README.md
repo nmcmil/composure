@@ -4,6 +4,8 @@
 
 ![Composure Screenshot](docs/screenshot.png)
 
+*✨ This screenshot was taken with Composure! (Yes, it's that meta.)*
+
 ## Features
 
 - 🎨 Beautiful gradient backgrounds
