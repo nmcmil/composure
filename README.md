@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Screenshot Beautifier for Linux</strong><br>
+  <strong>A Screenshot Beautifier for Linux</strong><br>
   Capture screenshots and compose them with stunning backgrounds, shadows, and rounded corners.
 </p>
 
