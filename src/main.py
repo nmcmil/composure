@@ -210,12 +210,12 @@ class ComposureApplication(Adw.Application):
         about = Adw.AboutWindow(
             transient_for=self.props.active_window,
             application_name="Composure",
-            application_icon="image-x-generic",
-            version="0.1.0",
+            application_icon="io.github.composure",
+            version="0.9.0",
             developer_name="@nmcmil",
             license_type=Gtk.License.GPL_3_0,
             comments="Linux Screenshot Beautifier\n\nCapture screenshots and compose them with pleasing backgrounds, shadows, and rounded corners.",
-            website="https://github.com/composure"
+            website="https://github.com/nmcmil/composure"
         )
         about.present()
         
