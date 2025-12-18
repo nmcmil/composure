@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png?v=3" alt="Composure Screenshot">
+  <img src="https://raw.githubusercontent.com/nmcmil/composure/main/docs/screenshot.png" alt="Composure Screenshot">
 </p>
 
 ## ✨ Features
