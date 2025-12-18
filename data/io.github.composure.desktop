@@ -1,10 +1,11 @@
 [Desktop Entry]
 Name=Composure
 Comment=Screenshot beautifier with automatic framing
-Exec=composure %U
+Exec=python3 -m src.main %U
 Icon=io.github.composure
 Terminal=false
 Type=Application
 Categories=Graphics;Utility;
 Keywords=screenshot;capture;beautify;share;
 StartupNotify=true
+StartupWMClass=io.github.composure
