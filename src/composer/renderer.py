@@ -309,31 +309,45 @@ class CompositionRenderer:
         # Step 2: Compute output size
         out_w, out_h = self.compute_output_size()
         
-        # Step 3: Create cairo surface
-        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, out_w, out_h)
-        ctx = cairo.Context(surface)
-        
-        # Step 4: Render background
-        bg = self.state.background
-        if bg.type == 'preset':
-            render_gradient_background(ctx, out_w, out_h, bg.preset_id)
-        elif bg.type == 'image' and bg.image_path:
-            render_image_background(ctx, out_w, out_h, bg.image_path)
-        else:
-            # Default gradient
-            render_gradient_background(ctx, out_w, out_h, 'sky')
-            
-        # Step 5: Calculate card placement
+        # Step 3: Calculate card placement FIRST to know if we need transparent margins
         padding = self.state.padding_px
         
-        # Ensure minimum margin for shadow and rounded corners to be visible
+        # Calculate shadow/corner margin needed
         shadow_margin = int(self.state.shadow.strength * 40) if self.state.shadow.strength > 0 else 0
         corner_margin = self.state.radius_px
         min_margin = max(shadow_margin, corner_margin, 0)
         
-        # Use at least min_margin if padding is too small
+        # If padding is 0 but we need margin for shadow/corners, use transparent background
+        use_transparent_bg = (padding == 0 and min_margin > 0)
+        
+        # Effective padding for card calculation
         effective_padding = max(padding, min_margin)
         
+        # Adjust output size if we need extra margin for shadow
+        if use_transparent_bg and min_margin > 0:
+            out_w = card_w + min_margin * 2
+            out_h = card_h + min_margin * 2
+        
+        # Step 4: Create cairo surface
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, out_w, out_h)
+        ctx = cairo.Context(surface)
+        
+        # Step 5: Render background (or leave transparent)
+        if use_transparent_bg:
+            # Clear to transparent
+            ctx.set_source_rgba(0, 0, 0, 0)
+            ctx.paint()
+        else:
+            # Normal background rendering
+            bg = self.state.background
+            if bg.type == 'preset':
+                render_gradient_background(ctx, out_w, out_h, bg.preset_id)
+            elif bg.type == 'image' and bg.image_path:
+                render_image_background(ctx, out_w, out_h, bg.image_path)
+            else:
+                render_gradient_background(ctx, out_w, out_h, 'sky')
+            
+        # Step 6: Calculate available space for card
         available_w = out_w - effective_padding * 2
         available_h = out_h - effective_padding * 2
         
@@ -346,14 +360,14 @@ class CompositionRenderer:
         draw_x = (out_w - draw_w) / 2
         draw_y = (out_h - draw_h) / 2
         
-        # Step 6: Render shadow
+        # Step 7: Render shadow
         render_shadow(
             ctx, draw_x, draw_y, draw_w, draw_h,
             self.state.radius_px,
             self.state.shadow
         )
         
-        # Step 7: Render card with rounded corners
+        # Step 8: Render card with rounded corners
         render_card(ctx, card_image, draw_x, draw_y, draw_w, draw_h, self.state.radius_px)
         
         # Convert to PIL Image
