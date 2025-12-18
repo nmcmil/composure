@@ -177,14 +177,10 @@ class CompositionPipeline:
             return False
             
         try:
-            # Ensure RGB for PNG without alpha issues
-            if result.mode == 'RGBA':
-                # Create white background
-                background = Image.new('RGB', result.size, (255, 255, 255))
-                background.paste(result, mask=result.split()[3])
-                background.save(path, 'PNG', optimize=True)
-            else:
-                result.save(path, 'PNG', optimize=True)
+            # Always save as RGBA to preserve transparency
+            if result.mode != 'RGBA':
+                result = result.convert('RGBA')
+            result.save(path, 'PNG', optimize=True)
             return True
         except Exception as e:
             print(f"Failed to export: {e}")
@@ -205,12 +201,10 @@ class CompositionPipeline:
             
         try:
             buf = io.BytesIO()
-            if result.mode == 'RGBA':
-                background = Image.new('RGB', result.size, (255, 255, 255))
-                background.paste(result, mask=result.split()[3])
-                background.save(buf, 'PNG', optimize=True)
-            else:
-                result.save(buf, 'PNG', optimize=True)
+            # Always save as RGBA to preserve transparency
+            if result.mode != 'RGBA':
+                result = result.convert('RGBA')
+            result.save(buf, 'PNG', optimize=True)
             return buf.getvalue()
         except Exception as e:
             print(f"Failed to export bytes: {e}")
