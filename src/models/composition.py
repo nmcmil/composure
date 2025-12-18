@@ -18,10 +18,10 @@ class ShadowLayer:
 @dataclass 
 class ShadowConfig:
     """Shadow configuration with multiple layers."""
-    strength: float = 0.55
+    strength: float = 0.80
     layers: list[ShadowLayer] = field(default_factory=lambda: [
-        ShadowLayer(blur=28, spread=-8, offset_y=18, opacity=0.18),
-        ShadowLayer(blur=10, spread=-4, offset_y=6, opacity=0.12),
+        ShadowLayer(blur=50, spread=0, offset_y=40, opacity=1.0),
+        ShadowLayer(blur=20, spread=0, offset_y=16, opacity=0.60),
     ])
 
 

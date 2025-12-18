@@ -175,42 +175,108 @@ def render_shadow(ctx: cairo.Context,
                   width: float, height: float,
                   radius: float,
                   shadow: ShadowConfig) -> None:
-    """
-    Render multi-layer shadow behind a card.
+    from PIL import ImageFilter, ImageDraw
     
-    Since Cairo doesn't have built-in blur, we approximate shadows
-    using multiple semi-transparent layers with slight offsets.
-    """
     if shadow.strength <= 0:
         return
         
     for layer in shadow.layers:
+        # Dynamic scaling based on strength
+        # Opacity: Linear scaling
         opacity = layer.opacity * shadow.strength
-        if opacity <= 0:
+        
+        # Dimensions: Scale with strength to make shadow "grow"
+        # range: 0.8x to 1.4x of base value
+        scale_factor = 0.8 + (shadow.strength * 0.6)
+        
+        current_blur = layer.blur * scale_factor
+        current_offset_y = layer.offset_y * scale_factor
+        current_spread = layer.spread * scale_factor
+        
+        if opacity <= 0.01:
             continue
             
-        # Approximate blur with multiple offset rectangles
-        blur_steps = max(1, int(layer.blur / 4))
-        step_opacity = opacity / blur_steps
+        # 1. Create a mask image for the shadow shape
+        blur_radius = current_blur
+        padding = int(blur_radius * 2)
         
-        for step in range(blur_steps):
-            factor = (step + 1) / blur_steps
-            current_blur = layer.blur * factor
-            current_spread = layer.spread * factor
-            current_offset_y = layer.offset_y * factor
+        # Dimensions of the shadow mask
+        mask_w = int(width + padding * 2)
+        mask_h = int(height + padding * 2)
+        
+        # Create mask: transparent background, black shape
+        mask = Image.new('RGBA', (mask_w, mask_h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(mask)
+        
+        # Draw the rounded rect in black
+        # Position centered in the padded mask
+        shape_x = padding
+        shape_y = padding
+        
+        draw.rounded_rectangle(
+            (shape_x, shape_y, shape_x + width, shape_y + height),
+            radius=radius,
+            fill=(0, 0, 0, 255)
+        )
+        
+        # 2. Apply Gaussian Blur
+        blurred_mask = mask.filter(ImageFilter.GaussianBlur(radius=blur_radius / 2))
+        
+        # 3. Apply Opacity
+        if opacity < 1.0:
+            r, g, b, a = blurred_mask.split()
+            a = a.point(lambda p: int(p * opacity))
+            blurred_mask = Image.merge('RGBA', (r, g, b, a))
+        
+        # 4. Draw to Cairo Context
+        dest_x = x + current_spread - padding
+        dest_y = y + current_spread + current_offset_y - padding
+        
+        # Adjust size for spread (spread expands/contracts the shape)
+        if current_spread != 0:
+            # Re-scaling might be needed for perfect spread correctness, 
+            # but simpler approximation is often enough. 
+            # For exact "spread" like CSS, we should resize the initial rect.
+            # AND WE DID: We drew the rect with 'width' and 'height'.
+            # Correct logic:
+            # If spread is positive, the source shape should be larger.
+            # If spread is negative, the source shape should be smaller.
+            # Rerunning logic: 
+            # We want the shadow CAST by a rect of (width + 2*spread, height + 2*spread)
             
-            # Shadow rectangle with spread and blur expansion
-            shadow_x = x - current_blur / 2 + current_spread
-            shadow_y = y - current_blur / 2 + current_spread + current_offset_y
-            shadow_w = width + current_blur - current_spread * 2
-            shadow_h = height + current_blur - current_spread * 2
+            # Recalculate mask for spread support
+            spread_w = width + current_spread * 2
+            spread_h = height + current_spread * 2
             
-            ctx.save()
-            ctx.set_source_rgba(0, 0, 0, step_opacity)
-            create_rounded_rect_path(ctx, shadow_x, shadow_y, shadow_w, shadow_h, 
-                                     radius + current_blur / 4)
-            ctx.fill()
-            ctx.restore()
+            if spread_w <= 0 or spread_h <= 0:
+                continue
+                
+            mask = Image.new('RGBA', (mask_w, mask_h), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(mask)
+            
+            # Recalculate centered position
+            center_x = mask_w / 2
+            center_y = mask_h / 2
+            
+            draw.rounded_rectangle(
+                (center_x - spread_w/2, center_y - spread_h/2, 
+                 center_x + spread_w/2, center_y + spread_h/2),
+                radius=max(0, radius + current_spread),
+                fill=(0, 0, 0, 255)
+            )
+            # Apply Gaussian Blur
+            blurred_mask = mask.filter(ImageFilter.GaussianBlur(radius=blur_radius / 2))
+            
+            # Apply Opacity
+            if opacity < 1.0:
+                r, g, b, a = blurred_mask.split()
+                a = a.point(lambda p: int(p * opacity))
+                blurred_mask = Image.merge('RGBA', (r, g, b, a))
+
+        # Convert to cairo and draw
+        shadow_surface, _data = pil_to_cairo_surface(blurred_mask)
+        ctx.set_source_surface(shadow_surface, dest_x, dest_y)
+        ctx.paint()
 
 
 def render_card(ctx: cairo.Context,
@@ -312,40 +378,44 @@ class CompositionRenderer:
         # Step 3: Calculate card placement FIRST to know if we need transparent margins
         padding = self.state.padding_px
         
-        # Calculate shadow/corner margin needed
-        shadow_margin = int(self.state.shadow.strength * 40) if self.state.shadow.strength > 0 else 0
-        corner_margin = self.state.radius_px
-        min_margin = max(shadow_margin, corner_margin, 0)
+        # Calculate required margin for shadow (based on actual shadow config)
+        # Shadow extends differently on each side - bottom needs extra for offset_y
+        shadow_margin_base = 0  # For top, left, right
+        shadow_margin_bottom = 0  # Extra for bottom due to offset_y
+        if self.state.shadow.strength > 0:
+            for layer in self.state.shadow.layers:
+                # Base margin: blur extends outward, spread can expand or contract
+                base = (layer.blur / 2) + max(0, -layer.spread)  # -spread means expansion
+                shadow_margin_base = max(shadow_margin_base, base)
+                # Bottom margin: base + offset_y (shadow drops down)
+                bottom = base + layer.offset_y
+                shadow_margin_bottom = max(shadow_margin_bottom, bottom)
+            shadow_margin_base = int(shadow_margin_base * self.state.shadow.strength) + 8
+            shadow_margin_bottom = int(shadow_margin_bottom * self.state.shadow.strength) + 8
         
-        # If padding is 0 but we need margin for shadow/corners, use transparent background
-        use_transparent_bg = (padding == 0 and min_margin > 0)
+        # Use the larger of the two for uniform padding (simplest approach)
+        shadow_margin = max(shadow_margin_base, shadow_margin_bottom)
         
-        # Effective padding for card calculation
-        effective_padding = max(padding, min_margin)
+        # Effective padding is always at least the shadow margin
+        effective_padding = max(padding, shadow_margin)
         
-        # Adjust output size if we need extra margin for shadow
-        if use_transparent_bg and min_margin > 0:
-            out_w = card_w + min_margin * 2
-            out_h = card_h + min_margin * 2
+        # Update output size to ensure shadow fits
+        if effective_padding > padding:
+            out_w = card_w + effective_padding * 2
+            out_h = card_h + effective_padding * 2
         
         # Step 4: Create cairo surface
         surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, out_w, out_h)
         ctx = cairo.Context(surface)
         
-        # Step 5: Render background (or leave transparent)
-        if use_transparent_bg:
-            # Clear to transparent
-            ctx.set_source_rgba(0, 0, 0, 0)
-            ctx.paint()
+        # Step 5: Render background
+        bg = self.state.background
+        if bg.type == 'preset':
+            render_gradient_background(ctx, out_w, out_h, bg.preset_id)
+        elif bg.type == 'image' and bg.image_path:
+            render_image_background(ctx, out_w, out_h, bg.image_path)
         else:
-            # Normal background rendering
-            bg = self.state.background
-            if bg.type == 'preset':
-                render_gradient_background(ctx, out_w, out_h, bg.preset_id)
-            elif bg.type == 'image' and bg.image_path:
-                render_image_background(ctx, out_w, out_h, bg.image_path)
-            else:
-                render_gradient_background(ctx, out_w, out_h, 'sky')
+            render_gradient_background(ctx, out_w, out_h, 'sky')
             
         # Step 6: Calculate available space for card
         available_w = out_w - effective_padding * 2

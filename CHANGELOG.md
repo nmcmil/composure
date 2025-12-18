@@ -2,7 +2,14 @@
 
 All notable changes to Composure will be documented in this file.
 
-## [0.9.0] - 2024-12-17
+## [0.9.1] - 2025-12-17
+
+### Improved
+- **Shadow Quality** — Implemented high-quality Gaussian blurred shadows using Pillow for smoother, "Figma-like" gradients.
+- **Shadow Defaults** — Significantly boosted default shadow opacity and depth for better visibility.
+- **Dynamic Controls** — The Shadow slider now intelligently scales blur, spread, and offset simultaneously.
+
+## [0.9.0] - 2025-12-17
 
 ### Added
 - **System tray indicator** — Composure now runs in the background and watches for new screenshots
