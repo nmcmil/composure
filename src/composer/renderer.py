@@ -325,8 +325,17 @@ class CompositionRenderer:
             
         # Step 5: Calculate card placement
         padding = self.state.padding_px
-        available_w = out_w - padding * 2
-        available_h = out_h - padding * 2
+        
+        # Ensure minimum margin for shadow and rounded corners to be visible
+        shadow_margin = int(self.state.shadow.strength * 40) if self.state.shadow.strength > 0 else 0
+        corner_margin = self.state.radius_px
+        min_margin = max(shadow_margin, corner_margin, 0)
+        
+        # Use at least min_margin if padding is too small
+        effective_padding = max(padding, min_margin)
+        
+        available_w = out_w - effective_padding * 2
+        available_h = out_h - effective_padding * 2
         
         # Scale card to fit within available space (contain)
         scale = min(available_w / card_w, available_h / card_h)
