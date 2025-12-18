@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png?v=2" alt="Composure Screenshot">
+  <img src="docs/screenshot.png?v=3" alt="Composure Screenshot">
 </p>
 
 ## ✨ Features
