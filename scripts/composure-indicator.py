@@ -22,6 +22,7 @@ class ComposureIndicator:
     """System tray indicator for Composure."""
     
     APP_ID = "composure-indicator"
+    ICON_NAME = "camera-photo-symbolic"
     
     def __init__(self):
         self._config_dir = self._get_config_dir()
@@ -34,13 +35,10 @@ class ComposureIndicator:
         # Screenshot directory to watch
         self._screenshot_dir = Path.home() / 'Pictures' / 'Screenshots'
         
-        # Get custom icon path
-        icon_path = str(self._script_dir / 'data' / 'icons' / 'composure-tray.png')
-        
-        # Create indicator with custom icon
+        # Create indicator with system icon
         self._indicator = AppIndicator3.Indicator.new(
             self.APP_ID,
-            icon_path,
+            self.ICON_NAME,
             AppIndicator3.IndicatorCategory.APPLICATION_STATUS
         )
         self._indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
