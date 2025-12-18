@@ -142,44 +142,15 @@ class ComposureCanvas(Gtk.DrawingArea):
                 
     def _draw_placeholder(self, ctx, width, height):
         """Draw a placeholder when no image is loaded."""
-        # Draw icon
-        ctx.set_source_rgba(1, 1, 1, 0.2)
-        
-        icon_size = 64
-        x = (width - icon_size) / 2
-        y = (height - icon_size) / 2 - 20
-        
-        # Simple camera icon
-        ctx.set_line_width(3)
-        
-        # Body
-        self._draw_rounded_rect(ctx, x, y + 16, icon_size, icon_size - 24, 8)
-        ctx.stroke()
-        
-        # Lens
-        ctx.arc(x + icon_size / 2, y + icon_size / 2, 12, 0, 3.14159 * 2)
-        ctx.stroke()
-        
-        # Flash
-        ctx.rectangle(x + 8, y + 8, 12, 8)
-        ctx.stroke()
-        
-        # Text
+        # Just draw simple text
+        ctx.set_source_rgba(1, 1, 1, 0.3)
         ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-        ctx.set_font_size(14)
+        ctx.set_font_size(16)
         
-        text = "Capture or open an image"
+        text = "Take a screenshot to get started"
         extents = ctx.text_extents(text)
-        ctx.move_to((width - extents.width) / 2, y + icon_size + 20)
+        ctx.move_to((width - extents.width) / 2, height / 2)
         ctx.show_text(text)
-        
-        # Shortcut hint
-        ctx.set_font_size(11)
-        ctx.set_source_rgba(1, 1, 1, 0.15)
-        hint = "Ctrl+N to capture  •  Ctrl+O to open"
-        extents = ctx.text_extents(hint)
-        ctx.move_to((width - extents.width) / 2, y + icon_size + 40)
-        ctx.show_text(hint)
         
     def _draw_rounded_rect(self, ctx, x, y, width, height, radius):
         """Draw a rounded rectangle path."""

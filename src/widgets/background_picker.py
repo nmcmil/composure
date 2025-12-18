@@ -90,6 +90,18 @@ class BackgroundPresetButton(Gtk.ToggleButton):
             ctx.set_source(pattern)
             ctx.paint()
             
+        # Add subtle border for light colors (like white)
+        colors = self.preset.get('colors', ['#888888'])
+        first_color = hex_to_rgb(colors[0])
+        # Check if color is light (simple luminance check)
+        luminance = 0.299 * first_color[0] + 0.587 * first_color[1] + 0.114 * first_color[2]
+        if luminance > 0.8:
+            # Draw subtle border
+            ctx.set_source_rgba(0, 0, 0, 0.15)
+            self._draw_rounded_rect(ctx, 0.5, 0.5, width - 1, height - 1, radius)
+            ctx.set_line_width(1)
+            ctx.stroke()
+            
     def _draw_rounded_rect(self, ctx, x, y, width, height, radius):
         """Draw rounded rectangle path."""
         ctx.new_path()
@@ -116,7 +128,7 @@ class BackgroundPicker(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         
         self._on_change = on_change
-        self._current_preset: Optional[str] = 'sky'
+        self._current_preset: Optional[str] = 'slate'
         self._buttons: dict[str, BackgroundPresetButton] = {}
         
         # Section label
@@ -125,30 +137,23 @@ class BackgroundPicker(Gtk.Box):
         label.add_css_class('section-title')
         self.append(label)
         
-        # Presets grid
-        grid = Gtk.FlowBox()
-        grid.set_selection_mode(Gtk.SelectionMode.NONE)
-        grid.set_max_children_per_line(8)
-        grid.set_min_children_per_line(4)
-        grid.set_row_spacing(4)
-        grid.set_column_spacing(4)
+        # Organize presets by layer
+        layer_1 = [(k, v) for k, v in BACKGROUND_PRESETS.items() if v.get('layer') == 1]
+        layer_2 = [(k, v) for k, v in BACKGROUND_PRESETS.items() if v.get('layer') == 2]
+        layer_3 = [(k, v) for k, v in BACKGROUND_PRESETS.items() if v.get('layer') == 3]
         
-        for preset_id, preset in BACKGROUND_PRESETS.items():
-            button = BackgroundPresetButton(preset_id, preset)
-            button.connect('toggled', self._on_preset_toggled)
-            self._buttons[preset_id] = button
-            grid.append(button)
-            
-        self.append(grid)
+        # Layer 1: Flat Colors
+        self._add_preset_row(layer_1)
         
-        # Desktop and Custom buttons
+        # Layer 2: Subtle Gradients
+        self._add_preset_row(layer_2)
+        
+        # Layer 3: Loud Gradients
+        self._add_preset_row(layer_3)
+        
+        # Custom button only (Desktop removed)
         extras_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         extras_box.set_margin_top(4)
-        
-        desktop_btn = Gtk.Button(label="Desktop")
-        desktop_btn.add_css_class('flat')
-        desktop_btn.connect('clicked', self._on_desktop_clicked)
-        extras_box.append(desktop_btn)
         
         custom_btn = Gtk.Button(label="Custom…")
         custom_btn.add_css_class('flat')
@@ -158,7 +163,24 @@ class BackgroundPicker(Gtk.Box):
         self.append(extras_box)
         
         # Set initial selection
-        self.set_preset('sky')
+        self.set_preset('slate')
+        
+    def _add_preset_row(self, presets: list) -> None:
+        """Add a row of preset buttons."""
+        grid = Gtk.FlowBox()
+        grid.set_selection_mode(Gtk.SelectionMode.NONE)
+        grid.set_max_children_per_line(8)
+        grid.set_min_children_per_line(8)
+        grid.set_row_spacing(4)
+        grid.set_column_spacing(4)
+        
+        for preset_id, preset in presets:
+            button = BackgroundPresetButton(preset_id, preset)
+            button.connect('toggled', self._on_preset_toggled)
+            self._buttons[preset_id] = button
+            grid.append(button)
+            
+        self.append(grid)
         
     def set_preset(self, preset_id: str) -> None:
         """Set the selected preset."""

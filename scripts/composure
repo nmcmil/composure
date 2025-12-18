@@ -1,0 +1,8 @@
+#!/bin/bash
+# Composure Launcher Script
+# This script is called by system shortcuts to launch Composure
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+cd "$SCRIPT_DIR"
+exec python3 -m src.main "$@"

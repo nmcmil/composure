@@ -5,7 +5,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 
 from gi.repository import Gtk, Adw, Gio, GLib, Gdk
-from typing import Optional
+from typing import Optional, Callable
 from PIL import Image
 import tempfile
 import os
@@ -14,6 +14,7 @@ from .widgets.canvas import ComposureCanvas
 from .widgets.controls import ControlPanel
 from .composer.pipeline import CompositionPipeline
 from .capture.manager import CaptureManager
+from .config import ConfigManager
 
 
 class ComposureWindow(Adw.ApplicationWindow):
@@ -28,6 +29,7 @@ class ComposureWindow(Adw.ApplicationWindow):
         # Core components
         self._pipeline = CompositionPipeline()
         self._capture_manager = CaptureManager()
+        self._config = ConfigManager()
         self._render_timeout_id: Optional[int] = None
         
         # Build UI
@@ -35,6 +37,23 @@ class ComposureWindow(Adw.ApplicationWindow):
         
         # Connect signals
         self._connect_signals()
+        
+        # Load default preset
+        self._load_default_preset()
+        
+    def _load_default_preset(self):
+        """Load the default preset if configured."""
+        preset_id = self._config.get_default_preset()
+        if preset_id:
+            # We need to defer this slightly to ensure UI is ready
+            GLib.idle_add(self._apply_preset_by_id, preset_id)
+            
+    def _apply_preset_by_id(self, preset_id):
+        """Helper to apply preset by ID."""
+        preset_manager = self._controls._preset_manager # Access via controls
+        preset = preset_manager.get(preset_id)
+        if preset:
+            self._controls.set_state(preset.composition)
         
     def _build_ui(self):
         """Build the window UI."""
@@ -52,11 +71,6 @@ class ComposureWindow(Adw.ApplicationWindow):
         open_btn.set_action_name('app.open')
         right_box.append(open_btn)
         
-        copy_btn = Gtk.Button(icon_name='edit-copy-symbolic')
-        copy_btn.set_tooltip_text("Copy to clipboard (Ctrl+C)")
-        copy_btn.set_action_name('app.copy')
-        right_box.append(copy_btn)
-        
         save_btn = Gtk.Button(label="Save")
         save_btn.set_tooltip_text("Save image (Ctrl+S)")
         save_btn.set_action_name('app.save')
@@ -64,6 +78,7 @@ class ComposureWindow(Adw.ApplicationWindow):
         
         # Hamburger menu
         menu = Gio.Menu()
+        menu.append("Preferences", "app.preferences")
         menu.append("About Composure", "app.about")
         
         menu_btn = Gtk.MenuButton()
@@ -230,8 +245,14 @@ class ComposureWindow(Adw.ApplicationWindow):
             self._info_label.set_text(f"Load error: {str(e)}")
             print(f"Load image error: {e}")
             
-    def copy_to_clipboard(self):
-        """Copy the composed image to clipboard using wl-copy for Wayland."""
+            
+    def copy_to_clipboard(self, callback: Optional[Callable] = None):
+        """
+        Copy the composed image to clipboard using wl-copy for Wayland.
+        
+        Args:
+            callback: Optional function to call after successful copy (e.g. for creating exit)
+        """
         result = self._pipeline.render()
         if result is None:
             self._info_label.set_text("Nothing to copy")
@@ -267,6 +288,12 @@ class ComposureWindow(Adw.ApplicationWindow):
             thread.start()
             
             self._info_label.set_text("Copied to clipboard")
+            
+            # If we have a callback, schedule it to run after a short delay
+            # to ensure the clipboard manager has time to grab it (if persistent)
+            # or just to let the user see the "Copied" message briefly.
+            if callback:
+                GLib.timeout_add(500, callback)
                 
         except FileNotFoundError:
             self._info_label.set_text("Install wl-clipboard: sudo apt install wl-clipboard")

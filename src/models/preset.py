@@ -134,8 +134,9 @@ class PresetManager:
         
     def delete_preset(self, preset_id: str) -> bool:
         """Delete a preset."""
+        # Don't delete built-in defaults
         if preset_id == 'default':
-            return False  # Don't delete default
+            return False
             
         path = self.presets_dir / f'{preset_id}.json'
         if path.exists():

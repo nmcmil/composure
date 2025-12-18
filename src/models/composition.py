@@ -40,7 +40,7 @@ class InsetConfig:
 class BackgroundConfig:
     """Background configuration."""
     type: str = "preset"  # "preset" | "desktop" | "image"
-    preset_id: str = "sky"
+    preset_id: str = "slate"
     image_path: Optional[str] = None
 
 
@@ -116,52 +116,88 @@ class CompositionState:
         return state
 
 
-# Background preset definitions
+# Background preset definitions organized by layer
+# Layer 1: Flat Colors (8)
+# Layer 2: Subtle Gradients (8)
+# Layer 3: Loud Gradients (8)
+
 BACKGROUND_PRESETS = {
-    'sky': {
-        'name': 'Sky',
-        'type': 'linear',
-        'colors': ['#4A90D9', '#1E3A5F'],
-        'angle': 135,
+    # === Layer 1: Flat Colors ===
+    'black': {
+        'name': 'Black', 'type': 'solid', 'colors': ['#000000'], 'layer': 1,
     },
-    'sunset': {
-        'name': 'Sunset',
-        'type': 'radial',
-        'colors': ['#FF6B6B', '#4A154B'],
-    },
-    'ocean': {
-        'name': 'Ocean',
-        'type': 'linear',
-        'colors': ['#00A99D', '#1A4068'],
-        'angle': 135,
-    },
-    'forest': {
-        'name': 'Forest',
-        'type': 'linear',
-        'colors': ['#2D5016', '#0F2027'],
-        'angle': 180,
-    },
-    'lavender': {
-        'name': 'Lavender',
-        'type': 'linear',
-        'colors': ['#667EEA', '#764BA2'],
-        'angle': 135,
-    },
-    'midnight': {
-        'name': 'Midnight',
-        'type': 'linear',
-        'colors': ['#0F2027', '#203A43'],
-        'angle': 180,
+    'white': {
+        'name': 'White', 'type': 'solid', 'colors': ['#FFFFFF'], 'layer': 1,
     },
     'slate': {
-        'name': 'Slate',
-        'type': 'solid',
-        'colors': ['#374151'],
+        'name': 'Slate', 'type': 'solid', 'colors': ['#374151'], 'layer': 1,
     },
-    'snow': {
-        'name': 'Snow',
-        'type': 'solid',
-        'colors': ['#F9FAFB'],
+    'zinc': {
+        'name': 'Zinc', 'type': 'solid', 'colors': ['#71717A'], 'layer': 1,
+    },
+    'stone': {
+        'name': 'Stone', 'type': 'solid', 'colors': ['#78716C'], 'layer': 1,
+    },
+    'navy': {
+        'name': 'Navy', 'type': 'solid', 'colors': ['#1E3A5F'], 'layer': 1,
+    },
+    'forest': {
+        'name': 'Forest', 'type': 'solid', 'colors': ['#14532D'], 'layer': 1,
+    },
+    'wine': {
+        'name': 'Wine', 'type': 'solid', 'colors': ['#4C1D35'], 'layer': 1,
+    },
+    
+    # === Layer 2: Subtle Gradients ===
+    'mist': {
+        'name': 'Mist', 'type': 'linear', 'colors': ['#E5E7EB', '#D1D5DB'], 'angle': 180, 'layer': 2,
+    },
+    'dusk': {
+        'name': 'Dusk', 'type': 'linear', 'colors': ['#374151', '#1F2937'], 'angle': 180, 'layer': 2,
+    },
+    'ocean': {
+        'name': 'Ocean', 'type': 'linear', 'colors': ['#1A4068', '#0F2027'], 'angle': 180, 'layer': 2,
+    },
+    'moss': {
+        'name': 'Moss', 'type': 'linear', 'colors': ['#2D5016', '#1A3409'], 'angle': 180, 'layer': 2,
+    },
+    'plum': {
+        'name': 'Plum', 'type': 'linear', 'colors': ['#4A154B', '#2D0A2E'], 'angle': 180, 'layer': 2,
+    },
+    'midnight': {
+        'name': 'Midnight', 'type': 'linear', 'colors': ['#0F172A', '#020617'], 'angle': 180, 'layer': 2,
+    },
+    'charcoal': {
+        'name': 'Charcoal', 'type': 'linear', 'colors': ['#27272A', '#18181B'], 'angle': 135, 'layer': 2,
+    },
+    'smoke': {
+        'name': 'Smoke', 'type': 'linear', 'colors': ['#44403C', '#292524'], 'angle': 135, 'layer': 2,
+    },
+    
+    # === Layer 3: Loud Gradients ===
+    'sunset': {
+        'name': 'Sunset', 'type': 'linear', 'colors': ['#F97316', '#DC2626'], 'angle': 135, 'layer': 3,
+    },
+    'aurora': {
+        'name': 'Aurora', 'type': 'linear', 'colors': ['#22D3EE', '#A855F7'], 'angle': 135, 'layer': 3,
+    },
+    'berry': {
+        'name': 'Berry', 'type': 'linear', 'colors': ['#EC4899', '#8B5CF6'], 'angle': 135, 'layer': 3,
+    },
+    'lime': {
+        'name': 'Lime', 'type': 'linear', 'colors': ['#84CC16', '#10B981'], 'angle': 135, 'layer': 3,
+    },
+    'sky': {
+        'name': 'Sky', 'type': 'linear', 'colors': ['#38BDF8', '#6366F1'], 'angle': 135, 'layer': 3,
+    },
+    'fire': {
+        'name': 'Fire', 'type': 'radial', 'colors': ['#FBBF24', '#DC2626'], 'layer': 3,
+    },
+    'neon': {
+        'name': 'Neon', 'type': 'linear', 'colors': ['#F43F5E', '#8B5CF6', '#3B82F6'], 'angle': 135, 'layer': 3,
+    },
+    'tropical': {
+        'name': 'Tropical', 'type': 'linear', 'colors': ['#14B8A6', '#FBBF24'], 'angle': 135, 'layer': 3,
     },
 }
 

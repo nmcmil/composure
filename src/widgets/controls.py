@@ -11,6 +11,7 @@ from .background_picker import BackgroundPicker
 from .ratio_picker import RatioPicker
 from ..models.composition import CompositionState
 from ..models.preset import PresetManager
+from ..config import ConfigManager
 
 
 class ControlPanel(Gtk.Box):
@@ -39,6 +40,7 @@ class ControlPanel(Gtk.Box):
         
         self._state = CompositionState()
         self._preset_manager = PresetManager()
+        self._config = ConfigManager()
         self._updating = False  # Prevent circular updates
         
         # Scrolled window for controls
@@ -116,6 +118,20 @@ class ControlPanel(Gtk.Box):
         save_btn.connect('clicked', self._on_save_preset)
         row.append(save_btn)
         
+        # Set Default button
+        self._default_btn = Gtk.Button(icon_name='emblem-favorite-symbolic')
+        self._default_btn.add_css_class('flat')
+        self._default_btn.set_tooltip_text("Set as default")
+        self._default_btn.connect('clicked', self._on_set_default)
+        row.append(self._default_btn)
+        
+        # Delete button
+        self._delete_btn = Gtk.Button(icon_name='user-trash-symbolic')
+        self._delete_btn.add_css_class('flat')
+        self._delete_btn.set_tooltip_text("Delete preset")
+        self._delete_btn.connect('clicked', self._on_delete_preset)
+        row.append(self._delete_btn)
+        
         box.append(row)
         return box
         
@@ -180,33 +196,14 @@ class ControlPanel(Gtk.Box):
         return box
         
     def _create_inset_section(self) -> Gtk.Box:
-        """Create inset section with balance toggle."""
+        """Create inset section."""
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         
-        # Header with label and balance toggle
-        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        
+        # Simple header
         lbl = Gtk.Label(label="Inset")
         lbl.set_halign(Gtk.Align.START)
         lbl.add_css_class('section-title')
-        header.append(lbl)
-        
-        header.append(Gtk.Box(hexpand=True))  # Spacer
-        
-        # Balance toggle
-        self._balance_switch = Gtk.Switch()
-        self._balance_switch.set_active(True)
-        self._balance_switch.set_valign(Gtk.Align.CENTER)
-        self._balance_switch.connect('notify::active', self._on_balance_toggled)
-        
-        balance_lbl = Gtk.Label(label="Balance")
-        balance_lbl.add_css_class('dim-label')
-        balance_lbl.set_margin_end(8)
-        
-        header.append(balance_lbl)
-        header.append(self._balance_switch)
-        
-        box.append(header)
+        box.append(lbl)
         
         # Slider (strength when balance on, manual px when off)
         adjustment = Gtk.Adjustment(
@@ -308,6 +305,40 @@ class ControlPanel(Gtk.Box):
             preset = self._preset_manager.get(preset_id)
             if preset:
                 self.set_state(preset.composition)
+                # Update button states
+                is_default = preset_id == self._config.get_default_preset()
+                self._default_btn.set_icon_name('starred-symbolic' if is_default else 'emblem-favorite-symbolic')
+                self._default_btn.set_sensitive(True)
+                
+                # Can't delete default preset or currently active default
+                is_builtin = preset_id == 'default'
+                self._delete_btn.set_sensitive(not is_builtin)
+                
+    def _on_set_default(self, button: Gtk.Button) -> None:
+        """Set current preset as default."""
+        idx = self._preset_dropdown.get_selected()
+        if 0 <= idx < len(self._preset_ids):
+            preset_id = self._preset_ids[idx]
+            self._config.set_default_preset(preset_id)
+            self._default_btn.set_icon_name('starred-symbolic')
+            
+    def _on_delete_preset(self, button: Gtk.Button) -> None:
+        """Delete current preset."""
+        idx = self._preset_dropdown.get_selected()
+        if 0 <= idx < len(self._preset_ids):
+            preset_id = self._preset_ids[idx]
+            
+            # Confirm dialog could be added here, but for now simple delete
+            if self._preset_manager.delete_preset(preset_id):
+                # If deleted the default, unset it
+                if self._config.get_default_preset() == preset_id:
+                    self._config.set_default_preset(None)
+                    
+                self._refresh_preset_list()
+                
+                # Select first item
+                if self._preset_ids:
+                    self._preset_dropdown.set_selected(0)
                 
     def _on_save_preset(self, button: Gtk.Button) -> None:
         """Handle save preset button."""
@@ -370,12 +401,8 @@ class ControlPanel(Gtk.Box):
         if hasattr(self, '_scale_shadow'):
             self._scale_shadow.set_value(state.shadow.strength * 100)
             
-        # Update inset
-        self._balance_switch.set_active(state.inset.mode == 'balance')
-        if state.inset.mode == 'balance':
-            self._inset_scale.set_value(state.inset.strength * 100)
-        else:
-            self._inset_scale.set_value(state.inset.manual_px)
+        # Update inset (use strength as default)
+        self._inset_scale.set_value(state.inset.strength * 100)
             
         # Update background
         if state.background.type == 'preset':

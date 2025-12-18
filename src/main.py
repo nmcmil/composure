@@ -13,6 +13,7 @@ gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, Gio, GLib, Gdk
 
 from .window import ComposureWindow
+from .config import ConfigManager
 
 
 class ComposureApplication(Adw.Application):
@@ -25,6 +26,7 @@ class ComposureApplication(Adw.Application):
         )
         
         self.set_resource_base_path('/io/github/composure')
+        self._config = ConfigManager()
         
     def do_startup(self):
         """Called when the application starts."""
@@ -72,6 +74,48 @@ class ComposureApplication(Adw.Application):
         about_action = Gio.SimpleAction.new('about', None)
         about_action.connect('activate', self._on_about)
         self.add_action(about_action)
+        
+        # Preferences action
+        prefs_action = Gio.SimpleAction.new('preferences', None)
+        prefs_action.connect('activate', self._on_preferences)
+        self.add_action(prefs_action)
+        
+        # New Capture Actions
+        for action_name in ['input-selection', 'input-window', 'input-screen']:
+            action = Gio.SimpleAction.new(action_name, None)
+            action.connect('activate', self._on_capture)
+            self.add_action(action)
+            
+        # Copy and Close action
+        copy_close_action = Gio.SimpleAction.new('copy-and-close', None)
+        copy_close_action.connect('activate', self._on_copy_and_close)
+        self.add_action(copy_close_action)
+        
+        # Set accelerators from config
+        self._update_accelerators()
+        
+    def _update_accelerators(self):
+        """Update accelerators from config."""
+        mapping = {
+            'app.capture': 'capture-selection', # Legacy/Default
+            'app.input-selection': 'capture-selection',
+            'app.input-window': 'capture-window',
+            'app.input-screen': 'capture-screen',
+            'app.copy': 'copy',
+            'app.copy-and-close': 'copy-and-close',
+            'app.open': 'open', # Not configurable yet, but key exists if we added it
+        }
+        
+        # Set configurable ones
+        for action_base, config_key in mapping.items():
+            accel = self._config.get_shortcut(config_key)
+            if accel:
+                self.set_accels_for_action(action_base, [accel])
+        
+        # Keep hardcoded ones for now if not in config
+        self.set_accels_for_action('app.save', ['<Primary>s'])
+        self.set_accels_for_action('app.quit', ['<Primary>q'])
+        self.set_accels_for_action('app.open', ['<Primary>o'])
         
     def _apply_css(self):
         """Apply custom CSS styling."""
@@ -145,6 +189,12 @@ class ComposureApplication(Adw.Application):
         if win and hasattr(win, 'copy_to_clipboard'):
             win.copy_to_clipboard()
             
+    def _on_copy_and_close(self, action, param):
+        """Handle copy and close action."""
+        win = self.props.active_window
+        if win and hasattr(win, 'copy_to_clipboard'):
+            win.copy_to_clipboard(callback=lambda: self.quit())
+            
     def _on_save(self, action, param):
         """Handle save action."""
         win = self.props.active_window
@@ -168,6 +218,19 @@ class ComposureApplication(Adw.Application):
             website="https://github.com/composure"
         )
         about.present()
+        
+    def _on_preferences(self, action, param):
+        """Show preferences dialog."""
+        from .widgets.preferences import PreferencesDialog
+        win = self.props.active_window
+        dialog = PreferencesDialog(transient_for=win)
+        dialog.present()
+        
+        # Refresh accelerators after dialog closes (or ideally during, but simple for now)
+        # For now, we rely on the dialog to not need immediate refresh or we can add a signal later.
+        # Actually, simpler: just refresh when window closes? 
+        # But dialog is modal.
+        dialog.connect('close-request', lambda d: self._update_accelerators())
 
 
 def main():
